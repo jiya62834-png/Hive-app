@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Hive — Daily Tracker</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#1B160F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hive">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="./icon-192.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --bg: #1B160F;
+  --surface: #241D14;
+  --surface-2: #2E2519;
+  --line: #3A2F20;
+  --cream: #F2E9D8;
+  --cream-dim: #B8AC94;
+  --gold: #E8A33D;
+  --gold-dim: #6b5326;
+  --sage: #8FA382;
+  --sage-dim: #3c4536;
+  --blue: #6B8CAE;
+  --blue-dim: #2c3947;
+  --teal: #4F9C93;
+  --teal-dim: #22403c;
+  --violet: #9B8AC4;
+  --violet-dim: #362f47;
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+
+body{
+  background: radial-gradient(ellipse at top, #241C13 0%, #1B160F 60%);
+  color: var(--cream);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  padding: 28px 16px 60px;
+}
+
+.wrap{ max-width: 620px; margin: 0 auto; }
+
+/* header */
+header{
+  display:flex; justify-content:space-between; align-items:flex-end;
+  margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid var(--line);
+}
+.eyebrow{
+  font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:0.14em;
+  text-transform:uppercase; color: var(--gold); margin-bottom:4px;
+}
+h1{
+  font-family:'Fraunces', serif; font-weight:600; font-size:30px; letter-spacing:-0.01em;
+}
+.streak{
+  font-family:'JetBrains Mono', monospace; text-align:right;
+}
+.streak .num{ font-size:22px; color:var(--gold); font-weight:600; }
+.streak .lbl{ font-size:10px; color:var(--cream-dim); text-transform:uppercase; letter-spacing:0.1em; }
+
+/* honeycomb weekly strip */
+.week-panel{
+  background: var(--surface); border:1px solid var(--line); border-radius:14px;
+  padding:18px; margin-bottom:20px;
+}
+.quickadd-row{ display:flex; gap:8px; align-items:center; }
+.quickadd-row input{
+  flex:1; min-width:0; background:var(--surface-2); border:1px solid var(--line); border-radius:9px;
+  padding:10px 12px; color:var(--cream); font-family:'Inter', sans-serif; font-size:14px;
+}
+.quickadd-row input:focus{ outline:none; border-color: var(--gold-dim); }
+.quickadd-row select{
+  background:var(--surface-2); border:1px solid var(--line); color:var(--cream-dim);
+  font-family:'JetBrains Mono', monospace; font-size:11px; padding:8px 6px; border-radius:8px;
+  max-width:108px;
+}
+.mic-btn{
+  flex-shrink:0; width:38px; height:38px; border-radius:50%;
+  border:1.5px solid var(--line); background:var(--surface-2); color:var(--cream-dim);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.mic-btn svg{ width:17px; height:17px; }
+.mic-btn:hover{ border-color: var(--gold-dim); color:var(--gold); }
+.mic-btn.listening{
+  background: var(--gold); color:#1B160F; border-color:var(--gold);
+  animation: pulse 1.1s ease-in-out infinite;
+}
+.mic-btn.unsupported{ opacity:0.35; cursor:not-allowed; }
+@keyframes pulse{
+  0%,100%{ box-shadow: 0 0 0 0 rgba(232,163,61,0.5); }
+  50%{ box-shadow: 0 0 0 7px rgba(232,163,61,0); }
+}
+.quickadd-status{
+  font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--cream-dim);
+  margin-top:8px; min-height:14px;
+}
+
+.week-title{
+  font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--cream-dim); margin-bottom:14px;
+}
+.hexrow{ display:flex; gap:8px; justify-content:space-between; }
+.hexcell{ position:relative; width:13%; }
+.hexcell .hex{
+  width:100%; aspect-ratio: 1/0.92;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  transition: background 0.4s ease;
+  cursor:default;
+}
+.hexcell .daylabel{
+  text-align:center; font-size:9px; margin-top:6px; color:var(--cream-dim);
+  font-family:'JetBrains Mono', monospace; letter-spacing:0.04em;
+}
+.hexcell .pct{ font-size:9px; font-family:'JetBrains Mono', monospace; color:var(--bg); font-weight:600; }
+.hexcell.today .hex{ box-shadow: 0 0 0 2px var(--gold); }
+
+/* focus timer */
+.timer-panel{
+  background: linear-gradient(135deg, var(--surface-2), var(--surface));
+  border:1px solid var(--line); border-radius:14px; padding:18px 20px;
+  margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; gap:16px;
+}
+.timer-left .week-title{ margin-bottom:6px; }
+.timer-display{
+  font-family:'JetBrains Mono', monospace; font-size:34px; font-weight:600; color:var(--gold);
+  letter-spacing:0.02em;
+}
+.timer-sub{ font-size:11px; color:var(--cream-dim); margin-top:2px; }
+.timer-controls{ display:flex; gap:8px; align-items:center; }
+.timer-controls select{
+  background:var(--surface-2); border:1px solid var(--line); color:var(--cream);
+  font-family:'JetBrains Mono', monospace; font-size:12px; padding:6px 8px; border-radius:8px;
+}
+.btn{
+  font-family:'Inter', sans-serif; font-weight:600; font-size:13px;
+  border:none; border-radius:9px; padding:10px 16px; cursor:pointer;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+.btn:active{ transform: scale(0.96); }
+.btn-gold{ background: var(--gold); color: #1B160F; }
+.btn-ghost{ background: transparent; color: var(--cream-dim); border:1px solid var(--line); }
+
+/* categories */
+.category{
+  background: var(--surface); border:1px solid var(--line); border-radius:14px;
+  padding:16px 18px; margin-bottom:14px;
+}
+.cat-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.cat-name{
+  font-family:'Fraunces', serif; font-weight:600; font-size:16px; display:flex; align-items:center; gap:8px;
+}
+.cat-dot{
+  width:10px; height:10px;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%);
+}
+.cat-frac{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--cream-dim); }
+.progress-track{ height:4px; background:var(--surface-2); border-radius:2px; overflow:hidden; margin-bottom:12px; }
+.progress-fill{ height:100%; border-radius:2px; transition: width 0.35s ease; }
+
+.task{
+  display:flex; align-items:center; gap:10px; padding:8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.task:last-of-type{ border-bottom:none; }
+.task-hex{
+  width:20px; height:20px; flex-shrink:0;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%);
+  border:1.5px solid var(--line); background:var(--surface-2);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition: background 0.15s ease, border 0.15s ease;
+}
+.task-hex.done{ border-color: transparent; }
+.task-hex svg{ width:11px; height:11px; opacity:0; transition:opacity .15s ease; }
+.task-hex.done svg{ opacity:1; }
+.task-label{ flex:1; font-size:14px; cursor:pointer; user-select:none; }
+.task-label.done{ color:var(--cream-dim); text-decoration: line-through; text-decoration-color: var(--line); }
+.task-del{
+  opacity:0; background:none; border:none; color:var(--cream-dim); cursor:pointer; font-size:14px;
+  padding:2px 6px; transition:opacity .15s ease;
+}
+.task:hover .task-del{ opacity:0.6; }
+.task-del:hover{ opacity:1 !important; color:var(--gold); }
+
+.add-row{ display:flex; gap:8px; margin-top:10px; }
+.add-row input{
+  flex:1; background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+  padding:8px 10px; color:var(--cream); font-family:'Inter', sans-serif; font-size:13px;
+}
+.add-row input:focus{ outline:none; border-color: var(--gold-dim); }
+.add-row button{
+  background:var(--surface-2); border:1px solid var(--line); color:var(--cream-dim);
+  border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-family:'Inter', sans-serif;
+}
+.add-row button:hover{ color:var(--gold); border-color:var(--gold-dim); }
+
+.add-row select{
+  background:var(--surface-2); border:1px solid var(--line); color:var(--cream-dim);
+  font-family:'JetBrains Mono', monospace; font-size:12px; padding:8px 6px; border-radius:8px;
+}
+
+.habit-row{
+  display:flex; align-items:center; gap:12px; padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.habit-row:last-of-type{ border-bottom:none; }
+.habit-toggle{
+  width:22px; height:22px; flex-shrink:0;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%);
+  border:1.5px solid var(--line); background:var(--surface-2);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.habit-toggle svg{ width:12px; height:12px; opacity:0; }
+.habit-toggle.done svg{ opacity:1; }
+.habit-mid{ flex:1; min-width:0; }
+.habit-name-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+.habit-name{ font-size:14px; display:flex; align-items:center; gap:7px; }
+.habit-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.habit-frac{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--cream-dim); }
+.habit-bar-track{ height:4px; background:var(--surface-2); border-radius:2px; overflow:hidden; }
+.habit-bar-fill{ height:100%; border-radius:2px; transition:width 0.35s ease; }
+.habit-del{
+  opacity:0; background:none; border:none; color:var(--cream-dim); cursor:pointer; font-size:13px;
+  padding:2px 4px; transition:opacity .15s ease; flex-shrink:0;
+}
+.habit-row:hover .habit-del{ opacity:0.6; }
+.habit-del:hover{ opacity:1 !important; color:var(--gold); }
+
+.footnote{
+  text-align:center; font-size:11px; color:var(--cream-dim); margin-top:24px;
+  font-family:'JetBrains Mono', monospace; letter-spacing:0.02em; line-height:1.6;
+}
+
+@media (max-width:420px){
+  .hexcell{ width:12.5%; }
+  h1{ font-size:24px; }
+  .timer-display{ font-size:28px; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="eyebrow" id="dateLine">—</div>
+      <h1>The Hive</h1>
+    </div>
+    <div class="streak">
+      <div class="num" id="streakNum">0</div>
+      <div class="lbl">day streak</div>
+    </div>
+  </header>
+
+  <div class="week-panel" id="quickAddPanel">
+    <div class="week-title">Quick add a task</div>
+    <div class="quickadd-row">
+      <button id="micBtn" class="mic-btn" title="Speak a task">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 003-3V6a3 3 0 10-6 0v6a3 3 0 003 3z" stroke="currentColor" stroke-width="1.8"/><path d="M19 11a7 7 0 01-14 0M12 19v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <input type="text" id="quickAddInput" placeholder="Type or tap the mic and speak…" />
+      <select id="quickAddCategory"></select>
+      <button id="quickAddBtn" class="btn btn-gold">Add</button>
+    </div>
+    <div class="quickadd-status" id="quickAddStatus">&nbsp;</div>
+  </div>
+
+  <div class="week-panel">
+    <div class="week-title">This week</div>
+    <div class="hexrow" id="hexRow"></div>
+  </div>
+
+  <div class="timer-panel">
+    <div class="timer-left">
+      <div class="week-title">Focus session</div>
+      <div class="timer-display" id="timerDisplay">25:00</div>
+      <div class="timer-sub" id="timerSub">0 sessions logged today</div>
+    </div>
+    <div class="timer-controls">
+      <select id="durationSelect">
+        <option value="15">15 min</option>
+        <option value="25" selected>25 min</option>
+        <option value="45">45 min</option>
+        <option value="60">60 min</option>
+      </select>
+      <button class="btn btn-ghost" id="resetBtn">Reset</button>
+      <button class="btn btn-gold" id="startBtn">Start</button>
+    </div>
+  </div>
+
+  <div class="week-panel" id="habitsPanel">
+    <div class="week-title">Key habits — this week</div>
+    <div id="habitsList"></div>
+    <div class="add-row">
+      <input type="text" id="habitNameInput" placeholder="Add a habit…" />
+      <select id="habitTargetInput">
+        <option value="3">3x/wk</option>
+        <option value="4">4x/wk</option>
+        <option value="5" selected>5x/wk</option>
+        <option value="6">6x/wk</option>
+        <option value="7">7x/wk</option>
+      </select>
+      <button id="addHabitBtn">Add</button>
+    </div>
+  </div>
+
+  <div id="categories"></div>
+
+  <div class="footnote">One cell at a time. Skipped days don't erase what's already built.</div>
+
+</div>
+
+<script>
+const storage = {
+  async get(key){
+    const raw = localStorage.getItem(key);
+    if(raw === null) throw new Error('not found');
+    return { key, value: raw, shared: false };
+  },
+  async set(key, value){
+    localStorage.setItem(key, value);
+    return { key, value, shared: false };
+  },
+  async delete(key){
+    localStorage.removeItem(key);
+    return { key, deleted: true, shared: false };
+  },
+  async list(prefix){
+    const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+    return { keys, prefix, shared: false };
+  }
+};
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+
+const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12L9 17L20 6" stroke="#1B160F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+const DEFAULT_CONFIG = {
+  categories: [
+    { id:'thesis', name:'Thesis', color:'sage', tasks:[
+      { id:'t1', label:'Write / revise Chapter 3 section' },
+      { id:'t2', label:'Data interpretation or discussion' },
+      { id:'t3', label:'Read a reference (CSK HPKV / ICAR-AICRP)' },
+    ]},
+    { id:'nabard', name:'NABARD Prep', color:'blue', tasks:[
+      { id:'n1', label:'Study session (topic block)' },
+      { id:'n2', label:'PIB / scheme diary entry' },
+      { id:'n3', label:'Quiz or active recall pass' },
+    ]},
+    { id:'gym', name:'Gym', color:'gold', tasks:[
+      { id:'g1', label:'Training session' },
+    ]},
+    { id:'health', name:'Health & Diet', color:'teal', tasks:[
+      { id:'h1', label:'Meals on plan' },
+      { id:'h2', label:'Water / sleep check' },
+    ]},
+    { id:'general', name:'General', color:'violet', tasks:[] },
+  ]
+};
+
+const DEFAULT_HABITS = [
+  { id:'h-gym',    name:'Gym session',       color:'gold',   weeklyTarget:5 },
+  { id:'h-thesis', name:'Thesis work block', color:'sage',   weeklyTarget:5 },
+  { id:'h-nabard', name:'NABARD study block',color:'blue',   weeklyTarget:6 },
+  { id:'h-diet',   name:'Meals on plan',     color:'teal',   weeklyTarget:7 },
+];
+
+const COLOR_MAP = {
+  sage:  { fill:'var(--sage)',  dim:'var(--sage-dim)'  },
+  blue:  { fill:'var(--blue)',  dim:'var(--blue-dim)'  },
+  gold:  { fill:'var(--gold)',  dim:'var(--gold-dim)'  },
+  teal:  { fill:'var(--teal)',  dim:'var(--teal-dim)'  },
+  violet:{ fill:'var(--violet)',dim:'var(--violet-dim)'},
+};
+
+let config = null;
+let todayLog = { completedTaskIds: [], focusSessions: 0 };
+let weekData = {};
+
+let habitsConfig = null;
+let todayHabitDone = [];
+let habitWeekData = {}; // dateKey -> array of habit ids done that day
+
+function todayKey(offset=0){
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0,10);
+}
+
+async function loadConfig(){
+  try{
+    const res = await storage.get('hive-config', false);
+    config = JSON.parse(res.value);
+  }catch(e){
+    config = DEFAULT_CONFIG;
+    await storage.set('hive-config', JSON.stringify(config), false);
+  }
+}
+
+async function saveConfig(){
+  try{ await storage.set('hive-config', JSON.stringify(config), false); }
+  catch(e){ console.error('save config failed', e); }
+}
+
+async function loadTodayLog(){
+  try{
+    const res = await storage.get('hive-log:' + todayKey(), false);
+    todayLog = JSON.parse(res.value);
+  }catch(e){
+    todayLog = { completedTaskIds: [], focusSessions: 0 };
+  }
+}
+
+async function saveTodayLog(){
+  try{ await storage.set('hive-log:' + todayKey(), JSON.stringify(todayLog), false); }
+  catch(e){ console.error('save log failed', e); }
+}
+
+function totalTaskCount(){
+  return config.categories.reduce((sum,c)=>sum+c.tasks.length,0);
+}
+
+async function loadWeek(){
+  weekData = {};
+  const promises = [];
+  for(let i=-6;i<=0;i++){
+    const key = todayKey(i);
+    promises.push(
+      storage.get('hive-log:' + key, false)
+        .then(res => { weekData[key] = JSON.parse(res.value); })
+        .catch(()=>{ weekData[key] = { completedTaskIds: [], focusSessions: 0 }; })
+    );
+  }
+  await Promise.all(promises);
+  weekData[todayKey()] = todayLog;
+}
+
+async function loadHabitsConfig(){
+  try{
+    const res = await storage.get('hive-habits-config', false);
+    habitsConfig = JSON.parse(res.value);
+  }catch(e){
+    habitsConfig = DEFAULT_HABITS;
+    await storage.set('hive-habits-config', JSON.stringify(habitsConfig), false);
+  }
+}
+
+async function saveHabitsConfig(){
+  try{ await storage.set('hive-habits-config', JSON.stringify(habitsConfig), false); }
+  catch(e){ console.error('save habits config failed', e); }
+}
+
+function mondayOfCurrentWeek(){
+  const d = new Date();
+  const dow = d.getDay(); // 0=Sun..6=Sat
+  const diffToMonday = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + diffToMonday);
+  return d;
+}
+
+function dateKeyFromDate(d){ return d.toISOString().slice(0,10); }
+
+async function loadHabitWeek(){
+  habitWeekData = {};
+  const monday = mondayOfCurrentWeek();
+  const today = new Date();
+  const promises = [];
+  let cursor = new Date(monday);
+  while(cursor <= today){
+    const key = dateKeyFromDate(cursor);
+    promises.push(
+      storage.get('hive-habit-log:' + key, false)
+        .then(res => { habitWeekData[key] = JSON.parse(res.value); })
+        .catch(()=>{ habitWeekData[key] = []; })
+    );
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  await Promise.all(promises);
+  todayHabitDone = habitWeekData[todayKey()] || [];
+}
+
+async function saveTodayHabits(){
+  try{ await storage.set('hive-habit-log:' + todayKey(), JSON.stringify(todayHabitDone), false); }
+  catch(e){ console.error('save habit log failed', e); }
+  habitWeekData[todayKey()] = todayHabitDone;
+}
+
+function weeklyCountFor(habitId){
+  let count = 0;
+  Object.values(habitWeekData).forEach(list=>{
+    if(Array.isArray(list) && list.includes(habitId)) count++;
+  });
+  return count;
+}
+
+function renderHabits(){
+  const list = document.getElementById('habitsList');
+  list.innerHTML = '';
+  habitsConfig.forEach(h=>{
+    const colors = COLOR_MAP[h.color] || COLOR_MAP.violet;
+    const done = todayHabitDone.includes(h.id);
+    const weekCount = weeklyCountFor(h.id);
+    const pct = Math.min(100, (weekCount / h.weeklyTarget) * 100);
+    const row = document.createElement('div');
+    row.className = 'habit-row';
+    row.innerHTML = `
+      <div class="habit-toggle ${done?'done':''}" data-habit="${h.id}" style="${done?`background:${colors.fill};`:''}">${CHECK_SVG}</div>
+      <div class="habit-mid">
+        <div class="habit-name-row">
+          <div class="habit-name"><span class="habit-dot" style="background:${colors.fill}"></span>${h.name}</div>
+          <div class="habit-frac">${weekCount}/${h.weeklyTarget} this wk</div>
+        </div>
+        <div class="habit-bar-track"><div class="habit-bar-fill" style="width:${pct}%; background:${colors.fill}"></div></div>
+      </div>
+      <button class="habit-del" data-habit="${h.id}">✕</button>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('.habit-toggle').forEach(node=>{
+    node.addEventListener('click', async (e)=>{
+      const id = e.currentTarget.getAttribute('data-habit');
+      if(todayHabitDone.includes(id)){
+        todayHabitDone = todayHabitDone.filter(x=>x!==id);
+      }else{
+        todayHabitDone.push(id);
+      }
+      await saveTodayHabits();
+      renderHabits();
+    });
+  });
+
+  list.querySelectorAll('.habit-del').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const id = e.currentTarget.getAttribute('data-habit');
+      habitsConfig = habitsConfig.filter(h=>h.id!==id);
+      todayHabitDone = todayHabitDone.filter(x=>x!==id);
+      await saveHabitsConfig();
+      await saveTodayHabits();
+      renderHabits();
+    });
+  });
+}
+
+document.getElementById('addHabitBtn').addEventListener('click', async ()=>{
+  const nameInput = document.getElementById('habitNameInput');
+  const targetInput = document.getElementById('habitTargetInput');
+  const name = nameInput.value.trim();
+  if(!name) return;
+  const palette = ['gold','sage','blue','teal','violet'];
+  const color = palette[habitsConfig.length % palette.length];
+  habitsConfig.push({ id:'h-'+Date.now(), name, color, weeklyTarget: parseInt(targetInput.value,10) });
+  await saveHabitsConfig();
+  nameInput.value = '';
+  renderHabits();
+});
+document.getElementById('habitNameInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('addHabitBtn').click();
+});
+
+function renderHeader(){
+  const d = new Date();
+  const opts = { weekday:'long', month:'short', day:'numeric' };
+  document.getElementById('dateLine').textContent = d.toLocaleDateString('en-US', opts);
+}
+
+function computeStreak(){
+  const total = totalTaskCount();
+  if(total === 0) return 0;
+  let streak = 0;
+  for(let i=0;i<60;i++){
+    const key = todayKey(-i);
+    const log = weekData[key] || (i===0 ? todayLog : null);
+    if(!log){
+      // fetch lazily not needed beyond week window for display purposes
+      break;
+    }
+    const pct = log.completedTaskIds.length / total;
+    if(i===0){
+      if(pct >= 0.6){ streak++; continue; } else { break; }
+    }
+    if(pct >= 0.6){ streak++; } else { break; }
+  }
+  return streak;
+}
+
+function renderWeekStrip(){
+  const row = document.getElementById('hexRow');
+  row.innerHTML = '';
+  const total = totalTaskCount();
+  const dayLabels = ['S','M','T','W','T','F','S'];
+  const todayDow = new Date().getDay();
+  for(let i=-6;i<=0;i++){
+    const key = todayKey(i);
+    const log = weekData[key] || { completedTaskIds: [] };
+    const pct = total > 0 ? log.completedTaskIds.length / total : 0;
+    const dow = (todayDow + i + 7) % 7;
+    const cell = document.createElement('div');
+    cell.className = 'hexcell' + (i===0 ? ' today' : '');
+    const bg = pct <= 0 ? 'var(--surface-2)' : `color-mix(in srgb, var(--gold) ${Math.round(pct*100)}%, var(--surface-2))`;
+    cell.innerHTML = `
+      <div class="hex" style="background:${bg}" title="${key}: ${Math.round(pct*100)}%"></div>
+      <div class="daylabel">${dayLabels[dow]}</div>
+    `;
+    row.appendChild(cell);
+  }
+  document.getElementById('streakNum').textContent = computeStreak();
+}
+
+function renderCategories(){
+  const wrap = document.getElementById('categories');
+  wrap.innerHTML = '';
+  config.categories.forEach(cat=>{
+    const colors = COLOR_MAP[cat.color];
+    const done = cat.tasks.filter(t=>todayLog.completedTaskIds.includes(t.id)).length;
+    const total = cat.tasks.length;
+    const pct = total>0 ? (done/total)*100 : 0;
+
+    const el = document.createElement('div');
+    el.className = 'category';
+    el.innerHTML = `
+      <div class="cat-head">
+        <div class="cat-name"><span class="cat-dot" style="background:${colors.fill}"></span>${cat.name}</div>
+        <div class="cat-frac">${done}/${total}</div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%; background:${colors.fill}"></div></div>
+      <div class="tasks"></div>
+      <div class="add-row">
+        <input type="text" placeholder="Add a task…" data-cat="${cat.id}" />
+        <button data-cat="${cat.id}" class="add-btn">Add</button>
+      </div>
+    `;
+    const tasksDiv = el.querySelector('.tasks');
+    cat.tasks.forEach(task=>{
+      const isDone = todayLog.completedTaskIds.includes(task.id);
+      const row = document.createElement('div');
+      row.className = 'task';
+      row.innerHTML = `
+        <div class="task-hex ${isDone?'done':''}" data-task="${task.id}" style="${isDone?`background:${colors.fill};`:''}">${CHECK_SVG}</div>
+        <div class="task-label ${isDone?'done':''}" data-task="${task.id}">${task.label}</div>
+        <button class="task-del" data-cat="${cat.id}" data-task="${task.id}">✕</button>
+      `;
+      tasksDiv.appendChild(row);
+    });
+    wrap.appendChild(el);
+  });
+
+  // wire task toggles
+  wrap.querySelectorAll('.task-hex, .task-label').forEach(node=>{
+    node.addEventListener('click', async (e)=>{
+      const id = e.currentTarget.getAttribute('data-task');
+      if(todayLog.completedTaskIds.includes(id)){
+        todayLog.completedTaskIds = todayLog.completedTaskIds.filter(x=>x!==id);
+      }else{
+        todayLog.completedTaskIds.push(id);
+      }
+      await saveTodayLog();
+      weekData[todayKey()] = todayLog;
+      renderCategories();
+      renderWeekStrip();
+    });
+  });
+
+  // wire delete
+  wrap.querySelectorAll('.task-del').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const catId = e.currentTarget.getAttribute('data-cat');
+      const taskId = e.currentTarget.getAttribute('data-task');
+      const cat = config.categories.find(c=>c.id===catId);
+      cat.tasks = cat.tasks.filter(t=>t.id!==taskId);
+      todayLog.completedTaskIds = todayLog.completedTaskIds.filter(x=>x!==taskId);
+      await saveConfig();
+      await saveTodayLog();
+      weekData[todayKey()] = todayLog;
+      renderCategories();
+      renderWeekStrip();
+    });
+  });
+
+  // wire add
+  wrap.querySelectorAll('.add-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> addTask(btn.getAttribute('data-cat')));
+  });
+  wrap.querySelectorAll('.add-row input').forEach(input=>{
+    input.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter') addTask(input.getAttribute('data-cat'));
+    });
+  });
+}
+
+async function addTask(catId){
+  const input = document.querySelector(`.add-row input[data-cat="${catId}"]`);
+  const label = input.value.trim();
+  if(!label) return;
+  const cat = config.categories.find(c=>c.id===catId);
+  const id = catId + '-' + Date.now();
+  cat.tasks.push({ id, label });
+  await saveConfig();
+  input.value = '';
+  renderCategories();
+  renderWeekStrip();
+}
+
+// --- Focus timer ---
+let timerInterval = null;
+let remainingSeconds = 25*60;
+let running = false;
+
+function formatTime(s){
+  const m = Math.floor(s/60).toString().padStart(2,'0');
+  const sec = (s%60).toString().padStart(2,'0');
+  return `${m}:${sec}`;
+}
+
+function renderTimer(){
+  document.getElementById('timerDisplay').textContent = formatTime(remainingSeconds);
+  document.getElementById('timerSub').textContent = `${todayLog.focusSessions || 0} session${(todayLog.focusSessions||0)===1?'':'s'} logged today`;
+}
+
+document.getElementById('durationSelect').addEventListener('change', (e)=>{
+  if(!running){
+    remainingSeconds = parseInt(e.target.value,10)*60;
+    renderTimer();
+  }
+});
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  if(running){
+    running = false;
+    clearInterval(timerInterval);
+    document.getElementById('startBtn').textContent = 'Resume';
+    return;
+  }
+  running = true;
+  document.getElementById('startBtn').textContent = 'Pause';
+  timerInterval = setInterval(async ()=>{
+    remainingSeconds--;
+    if(remainingSeconds <= 0){
+      clearInterval(timerInterval);
+      running = false;
+      remainingSeconds = 0;
+      renderTimer();
+      todayLog.focusSessions = (todayLog.focusSessions||0) + 1;
+      await saveTodayLog();
+      renderTimer();
+      document.getElementById('startBtn').textContent = 'Start';
+      const sel = document.getElementById('durationSelect');
+      remainingSeconds = parseInt(sel.value,10)*60;
+      renderTimer();
+      return;
+    }
+    renderTimer();
+  }, 1000);
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  running = false;
+  clearInterval(timerInterval);
+  document.getElementById('startBtn').textContent = 'Start';
+  const sel = document.getElementById('durationSelect');
+  remainingSeconds = parseInt(sel.value,10)*60;
+  renderTimer();
+});
+
+// --- Quick add (typing + voice) ---
+const GUESS_RULES = [
+  { cat:'thesis', words:['thesis','chapter','write','writing','manuscript','draft','literature','discussion','interpretation','reference'] },
+  { cat:'nabard', words:['nabard','study','pib','quiz','recall','scheme','soil','economic survey','mock','exam','notes'] },
+  { cat:'gym', words:['gym','workout','training','lift','cardio','run','glute'] },
+  { cat:'health', words:['diet','meal','water','sleep','protein','sattu','skyr','moringa','millet'] },
+];
+
+function guessCategory(text){
+  const t = text.toLowerCase();
+  for(const rule of GUESS_RULES){
+    if(rule.words.some(w => t.includes(w))) return rule.cat;
+  }
+  return 'general';
+}
+
+function populateQuickAddCategory(){
+  const sel = document.getElementById('quickAddCategory');
+  sel.innerHTML = '';
+  config.categories.forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('quickAddInput').addEventListener('input', (e)=>{
+  const guess = guessCategory(e.target.value);
+  if(e.target.value.trim().length > 2){
+    document.getElementById('quickAddCategory').value = guess;
+  }
+});
+
+async function submitQuickAdd(){
+  const input = document.getElementById('quickAddInput');
+  const sel = document.getElementById('quickAddCategory');
+  const label = input.value.trim();
+  if(!label) return;
+  const cat = config.categories.find(c=>c.id===sel.value) || config.categories[config.categories.length-1];
+  const id = cat.id + '-' + Date.now();
+  cat.tasks.push({ id, label });
+  await saveConfig();
+  input.value = '';
+  document.getElementById('quickAddStatus').textContent = `Added to ${cat.name}.`;
+  setTimeout(()=>{ document.getElementById('quickAddStatus').textContent = '\u00A0'; }, 2200);
+  renderCategories();
+  renderWeekStrip();
+}
+
+document.getElementById('quickAddBtn').addEventListener('click', submitQuickAdd);
+document.getElementById('quickAddInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') submitQuickAdd();
+});
+
+// Voice input via Web Speech API
+const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
+const micBtn = document.getElementById('micBtn');
+let recognition = null;
+let listening = false;
+
+if(!SpeechRecognitionImpl){
+  micBtn.classList.add('unsupported');
+  micBtn.title = 'Voice input isn\'t supported in this browser';
+}else{
+  recognition = new SpeechRecognitionImpl();
+  recognition.lang = 'en-IN';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onstart = ()=>{
+    listening = true;
+    micBtn.classList.add('listening');
+    document.getElementById('quickAddStatus').textContent = 'Listening…';
+  };
+  recognition.onresult = (event)=>{
+    let text = '';
+    for(let i=0;i<event.results.length;i++){ text += event.results[i][0].transcript; }
+    const input = document.getElementById('quickAddInput');
+    input.value = text;
+    const guess = guessCategory(text);
+    document.getElementById('quickAddCategory').value = guess;
+  };
+  recognition.onerror = (event)=>{
+    document.getElementById('quickAddStatus').textContent =
+      event.error === 'not-allowed' ? 'Mic access blocked — check browser permissions.' : 'Didn\'t catch that — try again.';
+  };
+  recognition.onend = ()=>{
+    listening = false;
+    micBtn.classList.remove('listening');
+    if(document.getElementById('quickAddStatus').textContent === 'Listening…'){
+      document.getElementById('quickAddStatus').textContent = '\u00A0';
+    }
+  };
+
+  micBtn.addEventListener('click', ()=>{
+    if(listening){ recognition.stop(); return; }
+    try{ recognition.start(); }
+    catch(e){ /* already started */ }
+  });
+}
+
+async function init(){
+  renderHeader();
+  await loadConfig();
+  populateQuickAddCategory();
+  await loadTodayLog();
+  await loadWeek();
+  renderWeekStrip();
+  renderCategories();
+  renderTimer();
+
+  await loadHabitsConfig();
+  await loadHabitWeek();
+  renderHabits();
+}
+
+init();
+</script>
+
+</body>
+</html>
