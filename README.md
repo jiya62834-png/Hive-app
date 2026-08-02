@@ -1,2 +1,0 @@
-# Hive-app
-Habit app
